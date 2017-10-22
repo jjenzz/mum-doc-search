@@ -1,0 +1,14 @@
+{
+	"name": "mum-doc-search",
+	"version": "1.0.0",
+	"main": "index.js",
+	"license": "MIT",
+	"private": true,
+	"dependencies": {
+		"find-in-files": "^0.4.0",
+		"officegen": "^0.4.5"
+	},
+	"scripts": {
+		"search": "node ."
+	}
+}
