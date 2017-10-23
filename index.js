@@ -8,10 +8,7 @@ const writeTo = process.argv[4];
 const chars = process.argv[5] || 400;
 
 function findText(term, content = '') {
-	const regex = new RegExp(
-		`\\b[\\s\\S]{0,${chars}}\\b${term}\\b\\b[\\s\\S]{0,${chars}}`,
-		'gi'
-	);
+	const regex = new RegExp(`\\b${term}\\b[\\s\\S]{0,${chars}}`, 'gi');
 	return [...content.match(regex)].map(str => str.trim());
 }
 
