@@ -1,15 +1,31 @@
-const officegen = require('officegen');
+const docx = require('docx');
 const PDFParser = require('pdf2json');
 const fs = require('fs');
 
 const directory = process.argv[2];
-const term = process.argv[3];
-const writeTo = process.argv[4];
-const chars = process.argv[5] || 400;
+const firstTerm = process.argv[3];
+const secondTerm = process.argv[4];
+const writeTo = process.argv[5];
+const styles = new docx.Styles();
 
-function findText(term, content = '') {
-	const regex = new RegExp(`\\b${term}\\b[\\s\\S]{0,${chars}}`, 'gi');
-	return [...content.match(regex)].map(str => str.trim());
+styles
+	.createParagraphStyle('Heading1', 'Heading 1')
+	.basedOn('Normal')
+	.next('Paragraph')
+	.quickFormat()
+	.size(30)
+	.bold()
+	.spacing({ after: 120 });
+
+function findText(first, second, content = '') {
+	const regex = new RegExp(`${first}[^]*?${second}`, 'g');
+	const match = content.match(regex);
+
+	if (match) {
+		return match.map(str => str.trim().replace(`${second}`, ''));
+	}
+
+	return null;
 }
 
 function readFile(path, cb) {
@@ -26,43 +42,31 @@ function readFile(path, cb) {
 	pdfParser.loadPDF(path);
 }
 
-function writeToDoc(doc, title, lines) {
-	doc.createP().addText(title, { bold: true, font_size: 30 });
+function writeToDoc(doc, title, matches) {
+	doc.createParagraph(title).heading1();
 
-	lines.forEach(line => {
-		const p = doc.createP();
-		p.addText(line);
-		p.addHorizontalLine();
+	matches.forEach(match => {
+		doc.createParagraph(match);
+		doc.createParagraph().thematicBreak();
+		doc.createParagraph().thematicBreak();
 	});
 
-	doc.putPageBreak();
+	doc.createParagraph().pageBreak();
 }
 
 fs.readdir(directory, (_, items) => {
 	const generated = [];
 	const pdfs = items.filter(item => item.match(/\.pdf$/));
-	const outPath = `${writeTo}/${term}.docx`;
-	const out = fs.createWriteStream(outPath);
-	const doc = officegen({
-		type: 'docx',
-		orientation: 'portrait',
-		title: term,
-		keywords: term
-	});
-
-	doc.on('finalize', () => {
-		console.log(`Created ${outPath}`);
-	});
-
-	doc.on('error', function(err) {
-		console.log(err);
+	const outPath = `${writeTo}/${firstTerm}.docx`;
+	const doc = new docx.Document({
+		title: firstTerm
 	});
 
 	pdfs.forEach(filename => {
 		const path = `${directory}/${filename}`;
 
 		readFile(path, content => {
-			const matches = findText(term, content);
+			const matches = findText(firstTerm, secondTerm, content);
 
 			generated.push(path);
 
@@ -71,7 +75,8 @@ fs.readdir(directory, (_, items) => {
 			}
 
 			if (generated.length === pdfs.length) {
-				doc.generate(out);
+				const exporter = new docx.LocalPacker(doc, styles);
+				exporter.pack(outPath);
 			}
 		});
 	});
